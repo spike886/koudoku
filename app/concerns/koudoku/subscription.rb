@@ -73,10 +73,15 @@ module Koudoku::Subscription
                 card: credit_card_token # obtained with Stripe.js
               }
 
+              subscription_attributes = {
+                  plan: self.plan.stripe_id,
+                  prorate: Koudoku.prorate
+              }
+
               # If the class we're being included in supports coupons ..
               if respond_to? :coupon
                 if coupon.present? and coupon.free_trial?
-                  customer_attributes[:trial_end] = coupon.free_trial_ends.to_i
+                  subscription_attributes[:trial_end] = coupon.free_trial_ends.to_i
                 end
               end
 
@@ -86,7 +91,7 @@ module Koudoku::Subscription
               customer = Stripe::Customer.create(customer_attributes)
 
               finalize_new_customer!(customer.id, plan.price)
-              customer.update_subscription(:plan => self.plan.stripe_id, :prorate => Koudoku.prorate)
+              customer.update_subscription(subscription_attributes)
 
             rescue Stripe::CardError => card_error
               errors[:base] << card_error.message
